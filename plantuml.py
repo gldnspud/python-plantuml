@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from os import environ, path, makedirs
-from urllib import urlencode
+from urllib.parse import urlencode
 from zlib import compress
 
 import httplib2
@@ -45,7 +45,7 @@ class PlantUMLHTTPError(PlantUMLConnectionError):
 def deflate_and_encode(plantuml_text):
     """zlib compress the plantuml text and encode it for the plantuml server.
     """
-    zlibbed_str = compress(plantuml_text)
+    zlibbed_str = compress(plantuml_text.encode('utf8'))
     compressed_string = zlibbed_str[2:-4]
     return encode(compressed_string)
 
@@ -55,13 +55,13 @@ def encode(data):
     encoding for the plantuml server
     """
     res = ""
-    for i in xrange(0, len(data), 3):
+    for i in range(0, len(data), 3):
         if i + 2 == len(data):
-            res += _encode3bytes(ord(data[i]), ord(data[i + 1]), 0)
+            res += _encode3bytes(data[i], data[i + 1], 0)
         elif i + 1 == len(data):
-            res += _encode3bytes(ord(data[i]), 0, 0)
+            res += _encode3bytes(data[i], 0, 0)
         else:
-            res += _encode3bytes(ord(data[i]), ord(data[i + 1]), ord(data[i + 2]))
+            res += _encode3bytes(data[i], data[i + 1], data[i + 2])
     return res
 
 
@@ -135,7 +135,7 @@ class PlantUML(object):
 
         # Proxify
         try:
-            from urlparse import urlparse
+            from urllib.parse import urlparse
             import socks
 
             proxy_uri = urlparse(environ.get('HTTPS_PROXY', environ.get('HTTP_PROXY')))
@@ -172,7 +172,7 @@ class PlantUML(object):
                 response, content = self.http.request(
                     login_url, method, headers=headers,
                     body=urlencode(body))
-            except self.HttpLib2Error, e:
+            except self.HttpLib2Error as e:
                 raise PlantUMLConnectionError(e)
             if response.status != 200:
                 raise PlantUMLHTTPError(response, content)
@@ -196,7 +196,7 @@ class PlantUML(object):
         url = self.get_url(plantuml_text)
         try:
             response, content = self.http.request(url, **self.request_opts)
-        except self.HttpLib2Error, e:
+        except self.HttpLib2Error as e:
             raise PlantUMLConnectionError(e)
         if response.status != 200:
             raise PlantUMLHTTPError(response, content)
@@ -226,7 +226,7 @@ class PlantUML(object):
         data = open(filename, 'U').read()
         try:
             content = self.processes(data)
-        except PlantUMLHTTPError, e:
+        except PlantUMLHTTPError as e:
             err = open(path.join(directory, errorfile), 'w')
             err.write(e.content)
             err.close()
@@ -251,8 +251,8 @@ def _build_parser():
 def main():
     args = _build_parser().parse_args()
     pl = PlantUML(args.server)
-    print map(lambda filename: {'filename': filename,
-                                'gen_success': pl.processes_file(filename, directory=args.out)}, args.files)
+    print([{'filename': filename,
+                                'gen_success': pl.processes_file(filename, directory=args.out)} for filename in args.files])
 
 
 if __name__ == '__main__':
