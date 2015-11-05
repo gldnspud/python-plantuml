@@ -18,6 +18,7 @@ but can be used against any server.
 
 ###Install
 
+    pip install httplib2
     pip install git+https://github.com/gldnspud/python-plantuml#egg=plantuml
 
 PS: At some point this newer version will be uploaded to PyPi, at which point you can do:
